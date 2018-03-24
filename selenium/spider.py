@@ -11,11 +11,13 @@ from config import *
 client = pymongo.MongoClient(MONGO_URL)
 db = client[MONGO_DB]
 
-browser = webdriver.Chrome()
+browser = webdriver.PhantomJS(service_args=SERVICE_ARGS)
 wait = WebDriverWait(browser, 10)
+browser.set_window_size(1400, 900)
 
 
 def search():
+    print('正在搜索')
     try:
         browser.get('https://www.taobao.com')
         input = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#q")))
@@ -32,6 +34,7 @@ def search():
 
 
 def next_page(page_number):
+    print('正在翻页', page_number)
     try:
         input = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "#mainsrp-pager > div > div > div > div.form > input")))
@@ -55,6 +58,7 @@ def get_products():
     items = doc('#mainsrp-itemlist .items .item').items()
     for item in items:
         product = {
+            'index': item.find('.pic a').attr('trace-index'),
             'image': item.find('.pic .img').attr('src'),
             'price': item.find('.price').text().replace('\n', ''),
             'deal': item.find('.deal-cnt').text()[:-3],
@@ -64,12 +68,14 @@ def get_products():
         }
         save_to_mongo(product)
 
+
 def save_to_mongo(result):
     try:
         if db[MONGO_TABLE].insert(result):
             print('存储到MONGODB成功', result)
     except Exception:
         print('存储到MONGODB失败')
+
 
 def main():
     total = search()
